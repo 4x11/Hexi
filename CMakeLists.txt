@@ -5,17 +5,24 @@
 # |_| |_|\___/_/\_\_| https://github.com/EmberEmu/hexi
 
 cmake_minimum_required(VERSION 3.29)
+
 set(HEXI_PROJECT_NAME hexi)
-project(${HEXI_PROJECT_NAME})
+
+project(${HEXI_PROJECT_NAME}
+	VERSION 1.3.5
+	LANGUAGES CXX
+)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ENABLE_TESTING OFF)
 
 ##############################
 #         Google Test        #
 ##############################
+
 if(ENABLE_TESTING)
 	find_package(Threads REQUIRED)
     include(FetchContent)
@@ -38,4 +45,70 @@ if(ENABLE_TESTING)
     add_subdirectory(tests)
 endif()
 
+##############################
+#       Library Target       #
+##############################
+
+add_library(${HEXI_PROJECT_NAME} INTERFACE)
+add_library(${HEXI_PROJECT_NAME}::${HEXI_PROJECT_NAME} ALIAS ${HEXI_PROJECT_NAME})
+
+target_include_directories(${HEXI_PROJECT_NAME} INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
 add_subdirectory(include)
+
+target_sources(${HEXI_PROJECT_NAME} INTERFACE
+	FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+    FILES ${HEXI_HEADERS}
+)
+
+##############################
+#       Library Install      #
+##############################
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+install(TARGETS ${HEXI_PROJECT_NAME}
+	EXPORT ${HEXI_PROJECT_NAME}-targets
+	FILE_SET HEADERS
+	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+set(CMAKE_CONFIG_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${HEXI_PROJECT_NAME}-config.cmake.in")
+set(CMAKE_CONFIG_VERSION_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${HEXI_PROJECT_NAME}-config-version.cmake.in")
+
+configure_package_config_file(
+    ${CMAKE_CONFIG_TEMPLATE}
+    "${CMAKE_CURRENT_BINARY_DIR}/${HEXI_PROJECT_NAME}-config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${HEXI_PROJECT_NAME}
+)
+
+write_basic_package_version_file(
+	"${CMAKE_CURRENT_BINARY_DIR}/${HEXI_PROJECT_NAME}-config-version.cmake"
+	VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+install(
+	FILES
+		"${CMAKE_CURRENT_BINARY_DIR}/${HEXI_PROJECT_NAME}-config.cmake"
+		"${CMAKE_CURRENT_BINARY_DIR}/${HEXI_PROJECT_NAME}-config-version.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${HEXI_PROJECT_NAME}
+)
+
+install(EXPORT ${HEXI_PROJECT_NAME}-targets
+	NAMESPACE ${HEXI_PROJECT_NAME}::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${HEXI_PROJECT_NAME}
+)
+
+install(FILES
+	"${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+	"${CMAKE_CURRENT_SOURCE_DIR}/LICENSE-MIT"
+	"${CMAKE_CURRENT_SOURCE_DIR}/README.md"
+	DESTINATION ${CMAKE_INSTALL_DOCDIR}
+    OPTIONAL
+)
